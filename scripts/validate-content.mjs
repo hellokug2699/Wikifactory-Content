@@ -3,8 +3,8 @@
  * 内容质量门禁：校验 Wikifactory-Content 的目录结构与 frontmatter
  * ---------------------------------------------------------------------------
  * 用法：
- *   npm run content:validate                 # Core：校验 ./content
- *   node scripts/validate-content.mjs [dir]  # 指定内容根目录（含 games/）
+ *   npm run content:validate                 # 自动定位：Core → ./content，Content → ./games
+ *   node scripts/validate-content.mjs [dir]  # 手动指定内容根目录（须包含 games/）
  *
  * 环境变量：
  *   CONTENT_DIR   内容根目录（默认自动探测，见 resolveRoot）
@@ -21,7 +21,7 @@
  *
  * 退出码：0 = 通过；1 = 存在错误（打印 ❌ Content validation failed）
  *
- * ⚠️ 本文件在 Wikifactory-Core（scripts/）与 Wikifactory-Content（tools/）各存一份，
+ * ⚠️ 本文件在 Wikifactory-Core（scripts/）与 Wikifactory-Content（scripts/）各存一份，
  *    修改时请同步两边，保持内容一致。
  */
 import fs from 'node:fs';
