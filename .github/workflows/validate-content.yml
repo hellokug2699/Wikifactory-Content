@@ -1,0 +1,33 @@
+name: Content validation
+
+# 内容质量门禁：校验目录结构 / frontmatter / 重复 URL。
+# 与 Wikifactory-Core 的 scripts/validate-content.mjs 同源（此处为 tools/ 下的副本），
+# 零外部依赖，仅需 Node 即可运行。
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate content structure & metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout content
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Validate content
+        run: node tools/validate-content.mjs
