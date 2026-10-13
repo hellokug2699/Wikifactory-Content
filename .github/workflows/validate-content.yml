@@ -1,7 +1,7 @@
 name: Content validation
 
 # 内容质量门禁：校验目录结构 / frontmatter / 重复 URL。
-# 与 Wikifactory-Core 的 scripts/validate-content.mjs 同源（此处为 tools/ 下的副本），
+# 与 Wikifactory-Core 的 scripts/validate-content.mjs 同源（此处为同路径副本），
 # 零外部依赖，仅需 Node 即可运行。
 on:
   push:
@@ -30,4 +30,4 @@ jobs:
           node-version: 22
 
       - name: Validate content
-        run: node tools/validate-content.mjs
+        run: npm run content:validate
