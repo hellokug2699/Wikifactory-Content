@@ -16,6 +16,7 @@
  * 校验项：
  *   [结构] 文件必须位于 games/<game>/<category>/<...>/<page>.md|.mdx
  *          —— 是否位于 games/、游戏/分类/文件名是否合法（宽松：仅拦真非法字符）
+ *   [保留] 游戏目录名不得与站点自身顶层路径同名（search / pagefind / _astro / 404）
  *   [冲突] 重复 URL（如 Foo.md 与 Foo.mdx → 同一 URL）、大小写冲突
  *   [元数据] title/description/tags/order/draft/updated/toc 的类型与取值
  *
@@ -55,6 +56,18 @@ function fail(message) {
 const SKIP_DIRS = new Set(['.git', '.github', 'node_modules', '.astro', 'dist', '.cache']);
 /** 允许放在 games/ 之外的 Markdown 元文件 */
 const ROOT_META_RE = /^(README|LICENSE|CONTRIBUTING|CHANGELOG|CODE_OF_CONDUCT)\.(md|mdx)$/i;
+
+/**
+ * 站点自身占用的顶层路径：游戏目录（games/ 下的一级目录）不得与之同名，
+ * 否则游戏主页会被静态页抢占或与产物目录冲突（如 games/search/ → /search/ 被搜索页占用）。
+ * 与 src/lib/aliases.ts 的保留路径保持一致（大小写不敏感）。
+ */
+const RESERVED_GAME_NAMES = new Map([
+  ['search', '站点搜索页 /search/'],
+  ['pagefind', 'Pagefind 搜索索引目录 /pagefind/'],
+  ['_astro', '构建产物资产目录 /_astro/'],
+  ['404', '404 页 /404'],
+]);
 
 const PAGE_EXT_RE = /\.(md|mdx)$/i;
 
@@ -302,6 +315,16 @@ for (const file of allFiles) {
     id: relFromGames.replace(PAGE_EXT_RE, ''),
     ext,
   });
+}
+
+// ---------------------------------------------------------------------------
+// 保留字校验：游戏目录不得与站点自身顶层路径同名（否则失败是静默的）
+// ---------------------------------------------------------------------------
+for (const game of new Set(pages.map((page) => page.game))) {
+  const reason = RESERVED_GAME_NAMES.get(game.toLowerCase());
+  if (reason) {
+    fail(`游戏目录名与站点保留路径冲突：games/${game}/（${reason}）`);
+  }
 }
 
 // ---------------------------------------------------------------------------
