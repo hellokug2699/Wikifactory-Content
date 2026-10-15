@@ -1,0 +1,9 @@
+{
+  "comment": "站点自身占用的顶层路径（大小写不敏感）。游戏目录名（games/<游戏>/）与别名路径都不得与之冲突，否则会与站点自身路径静默抢占或冲突。此文件是唯一事实来源：Wikifactory-Core 与 Wikifactory-Content 各存一份且必须逐字节一致（Core 的 tests/content.test.mjs 会校验）；Wikifactory-Core 的运行时（src/lib/aliases.ts）与两个门禁脚本（scripts/validate-content.mjs、scripts/validate-aliases.mjs）都读取本文件。",
+  "reserved": [
+    { "path": "search", "reason": "站点搜索页 /search/" },
+    { "path": "pagefind", "reason": "Pagefind 搜索索引目录 /pagefind/" },
+    { "path": "_astro", "reason": "构建产物资产目录 /_astro/" },
+    { "path": "404", "reason": "404 页 /404" }
+  ]
+}

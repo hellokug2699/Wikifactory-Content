@@ -4,6 +4,8 @@ Wikifactory 多游戏 Wiki 的**内容仓库**：只存页面层级 + Markdown +
 
 核心代码、全局主题与运营脚本位于私有仓库 **Wikifactory-Core**。
 
+> 内容贡献请先阅读 **[CONTRIBUTING.md](CONTRIBUTING.md)**：目录约定、frontmatter 字段、`_game.yml`、横幅 / 表格颜色等格式约定全部写在其中。
+
 ## 目录结构
 
 ```
@@ -16,8 +18,11 @@ Wikifactory-Content/
 │   │   └── Items/
 │   └── Dyson-Sphere-Program/
 │       └── ...
+├── config/
+│   └── reserved-paths.json    # 站点保留顶层路径（与私有 Core 同源，勿单独修改）
 ├── scripts/
-│   └── validate-content.mjs   # 内容质量门禁
+│   └── validate-content.mjs   # 内容质量门禁（与私有 Core 同源）
+├── CONTRIBUTING.md            # 内容贡献指南（面向内容作者）
 ├── package.json
 └── README.md
 ```
