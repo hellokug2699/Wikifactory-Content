@@ -1,8 +1,8 @@
 name: Content validation
 
-# 内容质量门禁：校验目录结构 / frontmatter / 重复 URL。
+# 内容质量门禁：校验目录结构 / frontmatter / 重复 URL / 游戏元数据。
 # 与 Wikifactory-Core 的 scripts/validate-content.mjs 同源（此处为同路径副本），
-# 零外部依赖，仅需 Node 即可运行。
+# 依赖 yaml（解析 _game.yml / _games.yml 的嵌套结构）。
 on:
   push:
     branches: [main]
@@ -28,6 +28,10 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Validate content
         run: npm run content:validate

@@ -9,7 +9,7 @@
  * 环境变量：
  *   CONTENT_DIR   内容根目录（默认自动探测，见 resolveRoot）
  *
- * 兼容两种仓库布局（脚本文件在两边保持一致，零外部依赖）：
+ * 兼容两种仓库布局（脚本文件在两边保持一致；除 yaml 外无其他依赖，见 package.json）：
  *   - Wikifactory-Core   ：<repo>/content/games/...   （content:sync 检出到 ./content）
  *   - Wikifactory-Content：<repo>/games/...           （games 直接位于仓库根）
  *
@@ -19,6 +19,7 @@
  *   [保留] 游戏目录名不得与站点自身顶层路径同名（search / pagefind / _astro / 404）
  *   [冲突] 重复 URL（如 Foo.md 与 Foo.mdx → 同一 URL）、大小写冲突
  *   [元数据] title/description/tags/order/draft/updated/toc 的类型与取值
+ *   [游戏元数据] _game.yml / _games.yml 的 YAML 解析与字段类型
  *
  * 退出码：0 = 通过；1 = 存在错误（打印 ❌ Content validation failed）
  *
@@ -29,6 +30,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 
 // ---------------------------------------------------------------------------
 // 内容根目录定位
@@ -442,6 +444,95 @@ for (const page of pages) {
   }
   for (const problem of checkFrontmatter(data)) {
     fail(`frontmatter 字段错误：${page.rel} → ${problem}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 游戏元数据校验（_game.yml / _games.yml）
+//   对应 src/lib/game-meta.ts 的读取：非法字段在那里会被静默丢弃，这里提前报错，
+//   避免「写了但没生效」的元数据一路混到线上。
+// ---------------------------------------------------------------------------
+const GAME_META_RE = /^games\/[^/]+\/_game\.ya?ml$/i;
+const GAMES_META_RE = /^games\/_games\.ya?ml$/i;
+
+const isPlainObject = (value) =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+const isStr = (value) => typeof value === 'string';
+
+/** 校验单个 _game.yml 的字段类型（data = 已解析的 YAML 值） */
+function checkGameMeta(data) {
+  const problems = [];
+  for (const key of ['title', 'shortTitle', 'description', 'badge']) {
+    if (key in data && !isStr(data[key])) problems.push(`"${key}" 必须是字符串`);
+  }
+  if ('order' in data && typeof data.order !== 'number') problems.push('"order" 必须是数字');
+
+  if ('links' in data) {
+    if (!Array.isArray(data.links)) {
+      problems.push('"links" 必须是数组');
+    } else {
+      data.links.forEach((link, i) => {
+        if (!isPlainObject(link)) problems.push(`"links[${i}]" 必须是映射（label / href）`);
+        else if (!isStr(link.label) || !isStr(link.href)) {
+          problems.push(`"links[${i}]" 需要字符串类型的 label 与 href`);
+        }
+      });
+    }
+  }
+
+  if ('categories' in data) {
+    if (!Array.isArray(data.categories)) {
+      problems.push('"categories" 必须是数组');
+    } else {
+      data.categories.forEach((category, i) => {
+        if (!isPlainObject(category)) {
+          problems.push(`"categories[${i}]" 必须是映射（id / label / order）`);
+          return;
+        }
+        if (!isStr(category.id)) problems.push(`"categories[${i}].id" 必须是字符串`);
+        if ('label' in category && !isStr(category.label)) {
+          problems.push(`"categories[${i}].label" 必须是字符串`);
+        }
+        if ('description' in category && !isStr(category.description)) {
+          problems.push(`"categories[${i}].description" 必须是字符串`);
+        }
+        if ('order' in category && typeof category.order !== 'number') {
+          problems.push(`"categories[${i}].order" 必须是数字`);
+        }
+      });
+    }
+  }
+  return problems;
+}
+
+/** 校验 _games.yml（全站游戏顺序）的字段类型 */
+function checkGamesMeta(data) {
+  if (!('order' in data)) return [];
+  if (!Array.isArray(data.order)) return ['"order" 必须是数组'];
+  const bad = data.order.findIndex((item) => !isStr(item) || item.trim() === '');
+  return bad === -1 ? [] : [`"order[${bad}]" 必须是非空的游戏 id 字符串`];
+}
+
+for (const file of allFiles) {
+  const isGameMeta = GAME_META_RE.test(file.rel);
+  if (!isGameMeta && !GAMES_META_RE.test(file.rel)) continue;
+
+  let data;
+  try {
+    data = parseYaml(fs.readFileSync(path.join(root, file.rel), 'utf8'));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    fail(`游戏元数据 YAML 解析失败：${file.rel}（${message}）`);
+    continue;
+  }
+  if (data === null || data === undefined) continue; // 空文件 = 无元数据
+
+  if (!isPlainObject(data)) {
+    fail(`游戏元数据必须是 YAML 映射（键值对）：${file.rel}`);
+    continue;
+  }
+  for (const problem of isGameMeta ? checkGameMeta(data) : checkGamesMeta(data)) {
+    fail(`游戏元数据字段错误：${file.rel} → ${problem}`);
   }
 }
 

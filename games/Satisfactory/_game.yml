@@ -1,0 +1,14 @@
+# 该游戏的展示元数据（可选）。
+# 不写本文件时，游戏展示名 = 目录名原样；写了则由内容作者自行维护展示信息。
+title: Satisfactory
+shortTitle: 满意
+description: 开放世界工厂建造游戏资料库
+order: 1
+badge: 抢先体验
+links:
+  - label: 官方网站
+    href: https://www.satisfactorygame.com/
+categories:
+  - id: Buildings
+    label: 建筑
+    order: 1
