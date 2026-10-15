@@ -23,10 +23,12 @@
  * 退出码：0 = 通过；1 = 存在错误（打印 ❌ Content validation failed）
  *
  * ⚠️ 本文件在 Wikifactory-Core（scripts/）与 Wikifactory-Content（scripts/）各存一份，
- *    修改时请同步两边，保持内容一致。
+ *    修改时请同步两边，保持内容一致（Core 的 tests/content.test.mjs 会校验两份是否逐字节一致）。
+ *    两者都读取仓库根 config/reserved-paths.json（同源副本，亦须保持一致）。
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // ---------------------------------------------------------------------------
 // 内容根目录定位
@@ -58,16 +60,48 @@ const SKIP_DIRS = new Set(['.git', '.github', 'node_modules', '.astro', 'dist', 
 const ROOT_META_RE = /^(README|LICENSE|CONTRIBUTING|CHANGELOG|CODE_OF_CONDUCT)\.(md|mdx)$/i;
 
 /**
- * 站点自身占用的顶层路径：游戏目录（games/ 下的一级目录）不得与之同名，
+ * 站点自身占用的顶层路径（唯一事实来源）：游戏目录（games/ 下的一级目录）不得与之同名，
  * 否则游戏主页会被静态页抢占或与产物目录冲突（如 games/search/ → /search/ 被搜索页占用）。
- * 与 src/lib/aliases.ts 的保留路径保持一致（大小写不敏感）。
+ *
+ * 数据来自仓库根 config/reserved-paths.json —— 运行时的保留路径（src/lib/aliases.ts）
+ * 与别名门禁（scripts/validate-aliases.mjs）读取同一份文件，避免各写一份导致漂移。
  */
-const RESERVED_GAME_NAMES = new Map([
-  ['search', '站点搜索页 /search/'],
-  ['pagefind', 'Pagefind 搜索索引目录 /pagefind/'],
-  ['_astro', '构建产物资产目录 /_astro/'],
-  ['404', '404 页 /404'],
-]);
+const reservedConfigPath = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'config',
+  'reserved-paths.json',
+);
+
+/** 读取 config/reserved-paths.json 的 reserved 列表为「小写路径 → 冲突说明」的 Map */
+function loadReservedGameNames() {
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(reservedConfigPath, 'utf8'));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('❌ Content validation failed');
+    console.error(`\n无法读取保留路径配置：${reservedConfigPath}\n（${message}）`);
+    console.error('该文件应与 scripts/ 位于同一仓库（config/reserved-paths.json），请确认检出完整。');
+    process.exit(1);
+  }
+
+  const entries = Array.isArray(parsed?.reserved) ? parsed.reserved : [];
+  const map = new Map();
+  for (const item of entries) {
+    if (item && typeof item.path === 'string' && item.path.trim() !== '') {
+      map.set(item.path.trim().toLowerCase(), typeof item.reason === 'string' ? item.reason : '');
+    }
+  }
+  if (map.size === 0) {
+    console.error('❌ Content validation failed');
+    console.error(`\n保留路径配置为空或格式不正确：${reservedConfigPath}`);
+    process.exit(1);
+  }
+  return map;
+}
+
+const RESERVED_GAME_NAMES = loadReservedGameNames();
 
 const PAGE_EXT_RE = /\.(md|mdx)$/i;
 
