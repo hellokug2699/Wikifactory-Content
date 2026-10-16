@@ -462,7 +462,7 @@ const isStr = (value) => typeof value === 'string';
 /** 校验单个 _game.yml 的字段类型（data = 已解析的 YAML 值） */
 function checkGameMeta(data) {
   const problems = [];
-  for (const key of ['title', 'shortTitle', 'description', 'badge']) {
+  for (const key of ['title', 'shortTitle', 'subtitle', 'description', 'badge', 'cover']) {
     if (key in data && !isStr(data[key])) problems.push(`"${key}" 必须是字符串`);
   }
   if ('order' in data && typeof data.order !== 'number') problems.push('"order" 必须是数字');

@@ -12,6 +12,8 @@ Wikifactory 多游戏 Wiki 的**内容仓库**：只存页面层级 + Markdown +
 Wikifactory-Content/
 ├── games/
 │   ├── Satisfactory/
+│   │   ├── _game.yml           # （可选）该游戏的展示元数据
+│   │   ├── _cover.svg          # （可选）首页缩略图，可改为 _cover.png 等
 │   │   ├── Buildings/
 │   │   │   ├── MAM.md
 │   │   │   └── ...
