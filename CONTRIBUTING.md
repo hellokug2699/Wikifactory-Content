@@ -64,7 +64,9 @@ toc: true               # 是否显示页内目录（缺省跟随站点设置）
 # games/Satisfactory/_game.yml（可选）
 title: Satisfactory                 # 缺省 = 目录名
 shortTitle: 满意                    # 顶部导航 / 面包屑用短名
+subtitle: 满意工厂                  # 首页图墙标题下方的次要文字（可选）
 description: 开放世界工厂建造游戏资料库
+cover: _cover.svg                   # 首页缩略图（可选；缺省取约定文件 _cover.<ext>）
 order: 1                            # 首页排序，越小越靠前
 badge: 公测                         # 状态徽标（可选）
 links:                              # 游戏专属外链（官网 / 社区 / 数据站）
@@ -85,6 +87,18 @@ order:
 ```
 
 优先级（低 → 高）：`_game.yml` → `_games.yml`（仅顺序）→ Core 侧覆盖（维护者使用）。内容侧只需维护前两者。
+
+### 首页缩略图
+
+首页「游戏板块」以**缩略图 + 文字**展示每个游戏。缩略图由你（编辑者）提供，二选一：
+
+1. **约定文件名（推荐）**：把图片放进该游戏目录，命名为 `_cover.<ext>`
+   （支持 `png` / `jpg` / `jpeg` / `webp` / `avif` / `gif` / `svg`）。
+   例：`games/Satisfactory/_cover.png` —— 放进去即生效，无需改 `_game.yml`。
+2. **显式指定**：在 `_game.yml` 写 `cover:`，值为相对该游戏目录的路径（如 `cover.png`）或绝对 URL（如 `https://…`，原样使用）。
+
+- 建议尺寸约 16:10（例 640×400），会被裁切填充（`object-fit: cover`）。
+- 未提供时首页显示占位块（游戏标题首字母），不影响构建与其它页面。
 
 ## 正文格式
 
