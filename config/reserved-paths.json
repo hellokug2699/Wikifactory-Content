@@ -4,6 +4,7 @@
     { "path": "search", "reason": "站点搜索页 /search/" },
     { "path": "pagefind", "reason": "Pagefind 搜索索引目录 /pagefind/" },
     { "path": "_astro", "reason": "构建产物资产目录 /_astro/" },
-    { "path": "404", "reason": "404 页 /404" }
+    { "path": "404", "reason": "404 页 /404" },
+    { "path": "about", "reason": "关于本站页 /about/" }
   ]
 }
