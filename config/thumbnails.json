@@ -1,0 +1,15 @@
+{
+  "comment": "缩略图标准（唯一事实来源，数据部分）。Core 的运行时（src/config/thumbnails.ts 导入本文件）与内容门禁（scripts/validate-content.mjs 校验 [icon=…] 引用）共同读取；Wikifactory-Core 与 Wikifactory-Content 各存一份且必须逐字节一致（Core 的 tests/content.test.mjs 会校验）。编辑者按本约定放图即可，无需写路径 / 尺寸 / 格式。",
+  "cover": {
+    "fileName": "_cover",
+    "extensions": ["png", "jpg", "jpeg", "webp", "avif", "gif", "svg"],
+    "aspectRatio": "16 / 10"
+  },
+  "icon": {
+    "dir": "assets/icons",
+    "extensions": ["svg", "png", "webp", "jpg", "jpeg", "avif", "gif"],
+    "publicPath": "/game-assets",
+    "sizes": { "sm": 20, "md": 24, "lg": 32 },
+    "defaultSize": "sm"
+  }
+}

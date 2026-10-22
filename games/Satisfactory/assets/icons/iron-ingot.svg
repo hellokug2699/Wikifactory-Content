@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- 示例图标：铁锭（编辑者请替换为正式素材，文件名即 [icon=iron-ingot]） -->
+  <defs>
+    <linearGradient id="ig" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fb0c2"/>
+      <stop offset="1" stop-color="#5d6b7a"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 40h36l-6 12H20z" fill="url(#ig)"/>
+  <path d="M20 28h24l-4 10H24z" fill="#c3d0dd"/>
+  <path d="M26 18h12l-3 8H29z" fill="#e1e8ef"/>
+</svg>

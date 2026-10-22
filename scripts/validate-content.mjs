@@ -105,6 +105,35 @@ function loadReservedGameNames() {
 
 const RESERVED_GAME_NAMES = loadReservedGameNames();
 
+/**
+ * 缩略图标准（唯一事实来源）：封面约定文件名 / 图标目录与格式 / 尺寸预设。
+ * 数据来自仓库根 config/thumbnails.json —— 运行时的 src/config/thumbnails.ts
+ * 导入同一份，本脚本只用它校验 [icon=…] 引用与 cover 路径，避免规则漂移。
+ */
+const thumbnailsConfigPath = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'config',
+  'thumbnails.json',
+);
+
+function loadThumbnailStandard() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(thumbnailsConfigPath, 'utf8'));
+    if (!parsed?.icon?.dir || !Array.isArray(parsed.icon.extensions)) throw new Error('结构不完整');
+    return parsed;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('❌ Content validation failed');
+    console.error(`\n无法读取缩略图标准配置：${thumbnailsConfigPath}\n（${message}）`);
+    console.error('该文件应与 scripts/ 位于同一仓库（config/thumbnails.json），请确认检出完整。');
+    process.exit(1);
+  }
+}
+
+const thumbnails = loadThumbnailStandard();
+const ICON_REF_RE = /\[icon=([^\]\n]+)\]/g;
+
 const PAGE_EXT_RE = /\.(md|mdx)$/i;
 
 /** 宽松命名规则：仅拦真正破坏 URL / 文件系统的字符 */
@@ -448,6 +477,41 @@ for (const page of pages) {
 }
 
 // ---------------------------------------------------------------------------
+// 小缩略图引用校验（正文 `[icon=名称]`）
+//   图标须位于 games/<游戏>/assets/icons/<名称>.<ext>（目录 / 格式见 config/thumbnails.json）。
+//   代码块 / 行内代码中的标记是语法示例，不参与校验。
+// ---------------------------------------------------------------------------
+/** 去掉围栏代码块与行内代码，避免把文档里的语法示例当成真实引用 */
+function stripCode(text) {
+  return text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/~~~[\s\S]*?~~~/g, '')
+    .replace(/`[^`\n]*`/g, '');
+}
+
+const ICON_NAME_RE = /^[a-z0-9][a-z0-9._-]*$/i;
+
+for (const page of pages) {
+  const body = stripCode(fs.readFileSync(path.join(root, page.rel), 'utf8'));
+  for (const match of body.matchAll(ICON_REF_RE)) {
+    const name = match[1].split(';')[0].trim();
+    if (!ICON_NAME_RE.test(name) || name.includes('..')) {
+      fail(`图标名称不合法：${page.rel} → [icon=${match[1]}]（只允许字母 / 数字 / . _ -）`);
+      continue;
+    }
+    const base = path.join(gamesDir, page.game, thumbnails.icon.dir);
+    const found = thumbnails.icon.extensions.some((ext) =>
+      fs.existsSync(path.join(base, `${name}.${ext}`)),
+    );
+    if (!found) {
+      fail(
+        `图标不存在：${page.rel} → [icon=${name}]（应位于 games/${page.game}/${thumbnails.icon.dir}/${name}.${thumbnails.icon.extensions[0]}）`,
+      );
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 游戏元数据校验（_game.yml / _games.yml）
 //   对应 src/lib/game-meta.ts 的读取：非法字段在那里会被静默丢弃，这里提前报错，
 //   避免「写了但没生效」的元数据一路混到线上。
@@ -533,6 +597,18 @@ for (const file of allFiles) {
   }
   for (const problem of isGameMeta ? checkGameMeta(data) : checkGamesMeta(data)) {
     fail(`游戏元数据字段错误：${file.rel} → ${problem}`);
+  }
+
+  // 封面路径校验：相对路径须真实存在于该游戏目录；URL / 站内绝对路径原样使用
+  if (isGameMeta && isStr(data.cover)) {
+    const cover = data.cover.trim();
+    const isExternal = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(cover) || cover.startsWith('/');
+    if (!isExternal) {
+      const gameId = file.rel.split('/')[1];
+      if (!fs.existsSync(path.join(gamesDir, gameId, cover))) {
+        fail(`封面文件不存在：${file.rel} → cover: ${cover}（应位于 games/${gameId}/${cover}）`);
+      }
+    }
   }
 }
 
