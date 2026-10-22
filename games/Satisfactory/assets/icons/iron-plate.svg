@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- 示例图标：铁板（文件名即 [icon=iron-plate]） -->
+  <rect x="8" y="22" width="48" height="20" rx="3" fill="#8fa0b2"/>
+  <rect x="8" y="22" width="48" height="7" rx="3" fill="#c6d2de"/>
+  <circle cx="16" cy="36" r="2" fill="#5d6b7a"/>
+  <circle cx="48" cy="36" r="2" fill="#5d6b7a"/>
+</svg>
