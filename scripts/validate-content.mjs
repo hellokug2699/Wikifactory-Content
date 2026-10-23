@@ -19,6 +19,7 @@
  *   [保留] 游戏目录名不得与站点自身顶层路径同名（search / pagefind / _astro / 404）
  *   [冲突] 重复 URL（如 Foo.md 与 Foo.mdx → 同一 URL）、大小写冲突
  *   [元数据] title/description/tags/order/draft/updated/toc 的类型与取值
+ *   [媒体] [[Audio/…]] 仅 .ogg 且文件存在；[[Embed/…]] 仅支持的 https 播放器
  *   [游戏元数据] _game.yml / _games.yml 的 YAML 解析与字段类型
  *
  * 退出码：0 = 通过；1 = 存在错误（打印 ❌ Content validation failed）
@@ -36,8 +37,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
 import {
-  ICON_DIR, ICON_EXTENSIONS, frontmatterTypeProblems, iconNameProblem,
-  nameProblem, rulesMatchConfig, tagProblems, urlKeyOf,
+  AUDIO_DIR, ICON_DIR, ICON_EXTENSIONS, audioNameProblem, frontmatterTypeProblems,
+  iconNameProblem, nameProblem, parseAudioMarker, parseEmbedMarker, rulesMatchConfig,
+  tagProblems, urlKeyOf,
 } from './content-rules.mjs';
 
 // ---------------------------------------------------------------------------
@@ -434,6 +436,9 @@ function stripCode(text) {
     .replace(/`[^`\n]*`/g, '');
 }
 
+const AUDIO_REF_RE = /\[\[Audio\s*[/\\]([^[\]\n]+)\]\]/gi;
+const EMBED_REF_RE = /\[\[Embed\s*[/\\]([^[\]\n]+)\]\]/gi;
+
 for (const page of pages) {
   const body = stripCode(fs.readFileSync(path.join(root, page.rel), 'utf8'));
   for (const match of body.matchAll(ICON_REF_RE)) {
@@ -452,6 +457,34 @@ for (const page of pages) {
         `图标不存在：${page.rel} → [icon=${name}]（应位于 games/${page.game}/${ICON_DIR}/${name}.${ICON_EXTENSIONS[0]}）`,
       );
     }
+  }
+
+  for (const match of body.matchAll(AUDIO_REF_RE)) {
+    const parsed = parseAudioMarker(match[1]);
+    if (!parsed) {
+      fail(`音频标记缺少文件名：${page.rel} → ${match[0]}`);
+      continue;
+    }
+    const problem = audioNameProblem(parsed.rawName);
+    if (problem) {
+      fail(`音频不合法：${page.rel} → ${match[0]}（${problem}）`);
+      continue;
+    }
+    const file = path.join(gamesDir, page.game, AUDIO_DIR, parsed.name);
+    if (!fs.existsSync(file)) {
+      fail(
+        `音频不存在：${page.rel} → ${match[0]}（应位于 games/${page.game}/${AUDIO_DIR}/${parsed.name}）`,
+      );
+    }
+  }
+
+  for (const match of body.matchAll(EMBED_REF_RE)) {
+    const parsed = parseEmbedMarker(match[1]);
+    if (!parsed) {
+      fail(`嵌入标记缺少链接：${page.rel} → ${match[0]}`);
+      continue;
+    }
+    if (parsed.warning) fail(`嵌入链接不受支持：${page.rel} → ${match[0]}（${parsed.warning}）`);
   }
 }
 
