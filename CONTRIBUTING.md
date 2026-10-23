@@ -11,6 +11,8 @@ games/
 ├── _games.yml                  # （可选）全站游戏顺序
 └── <游戏>/                     # 一级目录 = 游戏（目录名 = game id / URL 顶层，保留大小写）
     ├── _game.yml               # （可选）该游戏的展示元数据
+    ├── assets/icons/           # （可选）正文内联图标：<名称>.<ext>
+    ├── assets/images/          # （可选）正文大图：<名称>.<ext>
     └── <分类>/                 # 二级目录 = 分类
         └── <任意层级>/<页面>.md # 页面；扩展名必须是小写 .md / .mdx
 ```
@@ -184,6 +186,37 @@ games/Satisfactory/assets/icons/iron-plate.svg   ← 图标文件（文件名 = 
 
 > 图标标准（目录 / 格式 / 尺寸）由 `config/thumbnails.json` 统一定义（与私有 Core 同源），
 > 编辑者只需按上面约定放图与写标记。
+
+### 正文大图（MediaWiki 风格）
+
+正文配图放进该游戏的 `assets/images/`，用 `[[File/…]]` 引用，**不写路径、HTML 或像素值**：
+
+```md
+[[File/factory.png|thumb|md|alt=工厂全景|工厂全景]]
+[[File/iron-plate.png;thumb;md]]          ← 表格内用 ; 分隔选项
+```
+
+- **选项**：`thumb` / `frame`（边框）、`sm` / `md` / `lg` / `full`（尺寸预设）、
+  `left` / `center` / `right`（对齐）、`alt=…`，最后一个纯文本为图注。
+- **尺寸**：只写预设，不写像素；`300px` 会被映射到最近预设并提示。
+- **为什么是 `File/` 而不是 `File:`**：站点用 `:::warning` 横幅的 directive 特性，会把 `:名称`
+  当作 text directive，`[[File:demo.png]]` 会被拆开。`File/` 不冲突；确需冒号时写 `[[File\:demo.png]]`。
+- **表格里的竖线**：Markdown 表格会把 `|` 当列分隔符。图片写在表格里时请用 `;` 分隔选项
+  （`[[File/pic.png;lg]]`）；用 `|` 会被 Core 侧的 Wiki 语法门禁阻断。
+- 图片缺失 / 名称非法：内容仓库的 `npm run content:validate` 不检查这两项；Core CI 会额外运行
+  `npm run wiki:validate`，合并前即可发现。建议本地先确认 `assets/images/` 下文件存在。
+
+### 站内链接
+
+```md
+[[Satisfactory/Buildings/MAM|MAM 建筑]]   ← 显式页面 id
+[[MAM]]                                  ← 当前游戏内按标题 / 文件名解析
+[[Satisfactory]]                         ← 游戏主页
+[[Buildings]]                            ← 当前游戏下的分类页
+[[#合成]]                                ← 当前页面锚点
+```
+
+- 显式路径写错会被 Core CI 的 Wiki 语法门禁阻断；裸标题找不到只告警（可能指向别名）。
 
 ## 命名与保留路径规则
 
