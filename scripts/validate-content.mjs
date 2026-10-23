@@ -25,9 +25,10 @@
  *
  * ⚠️ 本文件在 Wikifactory-Core（scripts/）与 Wikifactory-Content（scripts/）各存一份，
  *    修改时请同步两边，保持内容一致（Core 的 tests/content.test.mjs 会校验两份是否逐字节一致）。
- *    路径 / frontmatter / 图标 / 日期等规则已抽到 scripts/content-rules.mjs（共享模块的逐字节副本，
+ *    路径 / 分类 / frontmatter / 图标 / 日期等规则已抽到 scripts/content-rules.mjs（共享模块的逐字节副本，
  *    来源：Wikifactory-Editor/app/assets/js/content-rules.js）；请勿手改，使用编辑器的
  *    scripts/rules-sync.mjs --write 同步。`npm run content:validate` 会先校验该文件校验和。
+ *    页面分类（tags）只能使用模板中的值，新增分类需在 Wikifactory-Editor 提交 issue。
  *    两者都读取仓库根 config/reserved-paths.json（同源副本，亦须保持一致）。
  */
 import fs from 'node:fs';
@@ -36,7 +37,7 @@ import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
 import {
   ICON_DIR, ICON_EXTENSIONS, frontmatterTypeProblems, iconNameProblem,
-  nameProblem, rulesMatchConfig, urlKeyOf,
+  nameProblem, rulesMatchConfig, tagProblems, urlKeyOf,
 } from './content-rules.mjs';
 
 // ---------------------------------------------------------------------------
@@ -413,6 +414,9 @@ for (const page of pages) {
     continue;
   }
   for (const problem of frontmatterTypeProblems(data)) {
+    fail(`frontmatter 字段错误：${page.rel} → ${problem}`);
+  }
+  for (const problem of tagProblems(data.tags)) {
     fail(`frontmatter 字段错误：${page.rel} → ${problem}`);
   }
 }
