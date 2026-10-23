@@ -13,7 +13,7 @@
  * The sync script also writes a checksum used by the content CI.
  */
 
-export const RULES_VERSION = '1.1.0';
+export const RULES_VERSION = '1.2.0';
 
 /** Top-level site paths that game directories must not shadow. */
 export const RESERVED_PATHS = ['search', 'pagefind', '_astro', '404', 'about'];
