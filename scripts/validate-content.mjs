@@ -25,12 +25,19 @@
  *
  * ⚠️ 本文件在 Wikifactory-Core（scripts/）与 Wikifactory-Content（scripts/）各存一份，
  *    修改时请同步两边，保持内容一致（Core 的 tests/content.test.mjs 会校验两份是否逐字节一致）。
+ *    路径 / frontmatter / 图标 / 日期等规则已抽到 scripts/content-rules.mjs（共享模块的逐字节副本，
+ *    来源：Wikifactory-Editor/app/assets/js/content-rules.js）；请勿手改，使用编辑器的
+ *    scripts/rules-sync.mjs --write 同步。`npm run content:validate` 会先校验该文件校验和。
  *    两者都读取仓库根 config/reserved-paths.json（同源副本，亦须保持一致）。
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
+import {
+  ICON_DIR, ICON_EXTENSIONS, frontmatterTypeProblems, iconNameProblem,
+  nameProblem, rulesMatchConfig, urlKeyOf,
+} from './content-rules.mjs';
 
 // ---------------------------------------------------------------------------
 // 内容根目录定位
@@ -76,6 +83,7 @@ const reservedConfigPath = path.join(
 );
 
 /** 读取 config/reserved-paths.json 的 reserved 列表为「小写路径 → 冲突说明」的 Map */
+let reservedConfigEntries = [];
 function loadReservedGameNames() {
   let parsed;
   try {
@@ -89,6 +97,7 @@ function loadReservedGameNames() {
   }
 
   const entries = Array.isArray(parsed?.reserved) ? parsed.reserved : [];
+  reservedConfigEntries = entries;
   const map = new Map();
   for (const item of entries) {
     if (item && typeof item.path === 'string' && item.path.trim() !== '') {
@@ -132,28 +141,15 @@ function loadThumbnailStandard() {
 }
 
 const thumbnails = loadThumbnailStandard();
+for (const problem of rulesMatchConfig({
+  reserved: reservedConfigEntries,
+  thumbnails,
+})) {
+  fail(`共享规则与仓库配置不一致：${problem}`);
+}
 const ICON_REF_RE = /\[icon=([^\]\n]+)\]/g;
 
 const PAGE_EXT_RE = /\.(md|mdx)$/i;
-
-/** 宽松命名规则：仅拦真正破坏 URL / 文件系统的字符 */
-const ILLEGAL_CHARS = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
-const CONTROL_RE = /[\u0000-\u001f\u007f]/;
-
-function nameProblem(name, { isFile = false } = {}) {
-  if (name.length === 0) return '名称为空';
-  const bad = ILLEGAL_CHARS.find((c) => name.includes(c));
-  if (bad) return `包含非法字符 “${bad}”`;
-  if (CONTROL_RE.test(name)) return '包含控制字符';
-  if (name !== name.trim()) return '首尾含空白';
-  if (name.startsWith('.')) return '以点开头';
-  if (isFile) {
-    const base = name.replace(PAGE_EXT_RE, '');
-    if (base.length === 0) return '文件名为空';
-    if (base.endsWith('.')) return '主文件名以点结尾';
-  }
-  return null;
-}
 
 // ---------------------------------------------------------------------------
 // frontmatter：极简 YAML 子集解析（零依赖，仅覆盖 frontmatter 常见写法）
@@ -256,53 +252,7 @@ function parseFrontmatter(src) {
   return data;
 }
 
-const DATE_RE =
-  /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
-
-function isValidDate(value) {
-  if (typeof value !== 'string' || !DATE_RE.test(value)) return false;
-  if (Number.isNaN(new Date(value).getTime())) return false;
-  const [y, m, d] = value.slice(0, 10).split('-').map(Number);
-  if (m < 1 || m > 12) return false;
-  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  return d >= 1 && d <= lastDay;
-}
-
-/** 校验 frontmatter 字段类型；返回错误说明数组 */
-function checkFrontmatter(data) {
-  const problems = [];
-  const typeOf = (v) =>
-    Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v;
-
-  if ('title' in data && data.title !== null && typeof data.title !== 'string') {
-    problems.push(`"title" 必须是字符串（当前为 ${typeOf(data.title)}）`);
-  }
-  if ('description' in data && data.description !== null && typeof data.description !== 'string') {
-    problems.push(`"description" 必须是字符串（当前为 ${typeOf(data.description)}）`);
-  }
-  if ('tags' in data && data.tags !== null) {
-    if (!Array.isArray(data.tags)) {
-      problems.push(`"tags" 必须是数组（当前为 ${typeOf(data.tags)}）`);
-    } else if (data.tags.some((t) => typeof t !== 'string')) {
-      problems.push('"tags" 的数组元素必须全部是字符串');
-    }
-  }
-  if ('order' in data && data.order !== null && typeof data.order !== 'number') {
-    problems.push(`"order" 必须是数字（当前为 ${typeOf(data.order)}）`);
-  }
-  if ('draft' in data && data.draft !== null && typeof data.draft !== 'boolean') {
-    problems.push(`"draft" 必须是布尔值（当前为 ${typeOf(data.draft)}）`);
-  }
-  if ('toc' in data && data.toc !== null && typeof data.toc !== 'boolean') {
-    problems.push(`"toc" 必须是布尔值（当前为 ${typeOf(data.toc)}）`);
-  }
-  if ('updated' in data && data.updated !== null && !isValidDate(data.updated)) {
-    problems.push(
-      `"updated" 必须是合法日期（YYYY-MM-DD 或 ISO 时间，当前为 ${JSON.stringify(data.updated)}）`,
-    );
-  }
-  return problems;
-}
+/** frontmatter 字段类型由共享规则模块统一校验（与编辑器一致）。 */
 
 // ---------------------------------------------------------------------------
 // 扫描内容文件
@@ -395,15 +345,6 @@ for (const game of new Set(pages.map((page) => page.game))) {
 // ---------------------------------------------------------------------------
 // 冲突校验：重复 URL / 大小写冲突
 // ---------------------------------------------------------------------------
-function urlKeyOf(id) {
-  // 归一化编码，捕捉 “空格 vs %20” 之类的隐性同 URL
-  try {
-    return decodeURIComponent(encodeURI(id));
-  } catch {
-    return id;
-  }
-}
-
 const byExactId = new Map(); // id -> pages
 const byUrlKey = new Map(); // urlKey -> pages（区分大小写）
 const byLowerUrlKey = new Map(); // 小写 urlKey -> pages（大小写冲突）
@@ -471,7 +412,7 @@ for (const page of pages) {
     fail(`frontmatter 解析失败：${page.rel}（${error.message}）`);
     continue;
   }
-  for (const problem of checkFrontmatter(data)) {
+  for (const problem of frontmatterTypeProblems(data)) {
     fail(`frontmatter 字段错误：${page.rel} → ${problem}`);
   }
 }
@@ -489,23 +430,22 @@ function stripCode(text) {
     .replace(/`[^`\n]*`/g, '');
 }
 
-const ICON_NAME_RE = /^[a-z0-9][a-z0-9._-]*$/i;
-
 for (const page of pages) {
   const body = stripCode(fs.readFileSync(path.join(root, page.rel), 'utf8'));
   for (const match of body.matchAll(ICON_REF_RE)) {
     const name = match[1].split(';')[0].trim();
-    if (!ICON_NAME_RE.test(name) || name.includes('..')) {
-      fail(`图标名称不合法：${page.rel} → [icon=${match[1]}]（只允许字母 / 数字 / . _ -）`);
+    const nameProblemText = iconNameProblem(name);
+    if (nameProblemText) {
+      fail(`图标名称不合法：${page.rel} → [icon=${match[1]}]（${nameProblemText}）`);
       continue;
     }
-    const base = path.join(gamesDir, page.game, thumbnails.icon.dir);
-    const found = thumbnails.icon.extensions.some((ext) =>
+    const base = path.join(gamesDir, page.game, ICON_DIR);
+    const found = ICON_EXTENSIONS.some((ext) =>
       fs.existsSync(path.join(base, `${name}.${ext}`)),
     );
     if (!found) {
       fail(
-        `图标不存在：${page.rel} → [icon=${name}]（应位于 games/${page.game}/${thumbnails.icon.dir}/${name}.${thumbnails.icon.extensions[0]}）`,
+        `图标不存在：${page.rel} → [icon=${name}]（应位于 games/${page.game}/${ICON_DIR}/${name}.${ICON_EXTENSIONS[0]}）`,
       );
     }
   }

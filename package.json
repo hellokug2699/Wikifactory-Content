@@ -4,7 +4,7 @@
   "private": true,
   "description": "Wikifactory 多游戏 Wiki 内容仓库：页面层级 + Markdown + frontmatter",
   "scripts": {
-    "content:validate": "node scripts/validate-content.mjs"
+    "content:validate": "node scripts/check-rules.mjs && node scripts/validate-content.mjs"
   },
   "dependencies": {
     "yaml": "^2.9.1"
