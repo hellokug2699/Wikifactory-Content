@@ -69,6 +69,8 @@ npm run content:validate
 
 同一门禁也在私有 Core 的 CI 中执行（同步内容后、构建前）；本仓库的 GitHub Actions（[.github/workflows/validate-content.yml](.github/workflows/validate-content.yml)）则在 push / PR 时自动运行。
 
+> 仓库已加入 `.gitattributes`（`* text=auto eol=lf`）。共享规则文件 `scripts/content-rules.mjs` 靠 sha256 逐字节校验，Windows 检出若转成 CRLF 会误报「共享规则不一致」；重新检出或 `git add --renormalize .` 即可恢复。
+
 ## 新增游戏
 
 直接创建目录即可，Validator 无需任何改动：

@@ -1,0 +1,18 @@
+# Keep the shared rules byte-identical across Editor / Content / Core: the
+# sha256 gate compares bytes, so Windows checkouts must use LF too.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.ogg binary
+*.svg text eol=lf
+*.zip binary
+*.apk binary
+*.neu binary
+*.jks binary
+*.keystore binary
