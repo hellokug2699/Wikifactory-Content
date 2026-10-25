@@ -1,5 +1,7 @@
 # Wikifactory-Content
 
+> 本仓库为独立的非官方 Wikifactory 相关资料/社区项目，与 wikifactory.com 及其运营方无任何关联，不代表官方立场，亦不用于任何商业目的。本站/本项目不提供任何产品开发、CAD 协作或制造对接服务。
+
 [Wikifactory](https://wikifactory.top) 多游戏 Wiki 的**内容仓库**：只存页面层级、Markdown 正文与 frontmatter 元数据，不含站点代码与主题。
 
 ## 目录即结构
@@ -29,6 +31,10 @@ npm run content:validate   # 本地内容门禁
 ```
 
 同一门禁会在 push / PR 时自动运行；任一处失败即阻断合并。
+
+## 页面别名
+
+页面别名（让用户手输的非正式路径落到正确页面）不在本仓库维护，由公开仓库 [Wikifactory-Alias](https://github.com/hellokug2699/Wikifactory-Alias) 负责。
 
 ## 安全
 
