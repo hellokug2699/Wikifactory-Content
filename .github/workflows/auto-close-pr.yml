@@ -1,0 +1,54 @@
+name: Auto close rejected pull requests
+
+# 维护者给 PR 打上「重复」或「不合规」后自动关闭，并留下说明。
+# 只处理这两个标签；「审查中」「内容质疑」不会关闭 PR。
+
+on:
+  pull_request:
+    types: [opened, reopened, labeled, synchronize]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  close:
+    if: >-
+      contains(github.event.pull_request.labels.*.name, '重复') ||
+      contains(github.event.pull_request.labels.*.name, '不合规')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close the pull request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels.map((label) => label.name);
+            const rejected = ['重复', '不合规'].filter((name) => labels.includes(name));
+            if (!rejected.length) return;
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: `本 PR 已标记为「${rejected.join('」「')}」，已自动关闭。\n\n如认为标记有误，请联系维护者重新打开并说明原因。`,
+            });
+
+            // 关闭后不再保留与状态冲突的标签。
+            for (const name of ['采纳', '审查中']) {
+              if (labels.includes(name)) {
+                await github.rest.issues
+                  .removeLabel({ owner, repo, issue_number, name })
+                  .catch(() => {});
+              }
+            }
+
+            await github.rest.pulls.update({
+              owner,
+              repo,
+              pull_number: issue_number,
+              state: 'closed',
+            });

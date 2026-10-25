@@ -1,0 +1,85 @@
+name: Mark accepted pull requests
+
+# 当 PR 的自动检查全部完成且通过时，自动添加「采纳」标签。
+# 「完成」= 该 head 提交上的全部 check runs 都是 completed，且没有失败结论。
+# 被标记「重复」/「不合规」的 PR 不会添加；起草中的 PR 也不会。
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_run:
+    workflows: ["Content validation"]
+    types: [completed]
+
+permissions:
+  contents: read
+  checks: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add the accepted label when every check passed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            let sha = '';
+            let number = 0;
+
+            if (context.eventName === 'workflow_run') {
+              const run = context.payload.workflow_run;
+              if (run.conclusion !== 'success') return;
+              sha = run.head_sha;
+              const associated = await github.paginate(
+                github.rest.repos.listPullRequestsAssociatedWithCommit,
+                { owner, repo, commit_sha: sha },
+              );
+              const open = associated.filter((pr) => pr.state === 'open' && !pr.draft);
+              if (!open.length) return;
+              number = open[0].number;
+            } else {
+              const pr = context.payload.pull_request;
+              if (!pr || pr.draft) return;
+              sha = pr.head.sha;
+              number = pr.number;
+            }
+
+            const { data: issue } = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: number,
+            });
+            const names = (issue.labels || []).map((label) =>
+              typeof label === 'string' ? label : label.name,
+            );
+            if (names.includes('重复') || names.includes('不合规')) return;
+
+            const runs = await github.paginate(github.rest.checks.listForRef, {
+              owner,
+              repo,
+              ref: sha,
+              per_page: 100,
+            });
+            if (!runs.length) return;
+
+            // 只有全部检查都结束且没有失败时才算「完成」。
+            if (runs.some((run) => run.status !== 'completed')) return;
+            const failed = new Set([
+              'failure',
+              'timed_out',
+              'cancelled',
+              'action_required',
+              'startup_failure',
+              'stale',
+            ]);
+            if (runs.some((run) => failed.has(run.conclusion))) return;
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: number,
+              labels: ['采纳'],
+            });
