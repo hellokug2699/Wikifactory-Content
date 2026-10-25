@@ -1,8 +1,8 @@
 # 贡献指南（Wikifactory-Content）
 
 本仓库是 Wikifactory 多游戏 Wiki 的**内容仓库**：只存放**页面层级 + Markdown + frontmatter 元数据**。
-站点代码、主题、路由与运营脚本位于**私有**仓库 Wikifactory-Core —— 内容贡献者无需（也无法）访问它，
-因此**本文件就是内容侧所需的全部约定**：结构与格式都写在这里。
+
+**本文件就是内容侧所需的全部约定**：结构与格式都写在这里，按下面的顺序读完即可开始贡献。
 
 ## 目录即结构
 
@@ -88,7 +88,7 @@ order:
   - Factorio
 ```
 
-优先级（低 → 高）：`_game.yml` → `_games.yml`（仅顺序）→ Core 侧覆盖（维护者使用）。内容侧只需维护前两者。
+优先级（低 → 高）：`_game.yml` → `_games.yml`（仅顺序）→ 站点侧覆盖（维护者使用）。内容侧只需维护前两者。
 
 ### 首页缩略图（大缩略图）
 
@@ -184,7 +184,7 @@ games/Satisfactory/assets/icons/iron-plate.svg   ← 图标文件（文件名 = 
 - 代码块 / 行内代码中的标记保持原文，可用于书写语法示例。
 - 图标缺失或名称非法：构建期会保留原文并告警；**内容门禁会直接报错**，请在合并前补上图标文件。
 
-> 图标标准（目录 / 格式 / 尺寸）由 `config/thumbnails.json` 统一定义（与私有 Core 同源），
+> 图标标准（目录 / 格式 / 尺寸）由 `config/thumbnails.json` 统一定义，
 > 编辑者只需按上面约定放图与写标记。
 
 ### 正文大图（MediaWiki 风格）
@@ -202,9 +202,9 @@ games/Satisfactory/assets/icons/iron-plate.svg   ← 图标文件（文件名 = 
 - **为什么是 `File/` 而不是 `File:`**：站点用 `:::warning` 横幅的 directive 特性，会把 `:名称`
   当作 text directive，`[[File:demo.png]]` 会被拆开。`File/` 不冲突；确需冒号时写 `[[File\:demo.png]]`。
 - **表格里的竖线**：Markdown 表格会把 `|` 当列分隔符。图片写在表格里时请用 `;` 分隔选项
-  （`[[File/pic.png;lg]]`）；用 `|` 会被 Core 侧的 Wiki 语法门禁阻断。
-- 图片缺失 / 名称非法：内容仓库的 `npm run content:validate` 不检查这两项；Core CI 会额外运行
-  `npm run wiki:validate`，合并前即可发现。建议本地先确认 `assets/images/` 下文件存在。
+  （`[[File/pic.png;lg]]`）；用 `|` 会被构建门禁阻断。
+- 图片缺失 / 名称非法：`npm run content:validate` 不检查这两项；站点构建会在合并前额外运行
+  `npm run wiki:validate`。建议本地先确认 `assets/images/` 下文件存在。
 
 ### 站内链接
 
@@ -216,7 +216,7 @@ games/Satisfactory/assets/icons/iron-plate.svg   ← 图标文件（文件名 = 
 [[#合成]]                                ← 当前页面锚点
 ```
 
-- 显式路径写错会被 Core CI 的 Wiki 语法门禁阻断；裸标题找不到只告警（可能指向别名）。
+- 显式路径写错会被构建时的 Wiki 语法门禁阻断；裸标题找不到只告警（可能指向别名）。
 
 ## 命名与保留路径规则
 
@@ -232,10 +232,33 @@ npm install            # 首次需安装依赖（门禁脚本依赖 yaml）
 npm run content:validate
 ```
 
-门禁会校验：目录结构、页面 frontmatter 字段类型、重复 URL / 大小写冲突、保留路径、
-`_game.yml` / `_games.yml` 的 YAML 解析与字段类型，以及**缩略图引用**
-（正文 `[icon=名称]` 必须有对应图标文件；`_game.yml` 的 `cover` 相对路径必须存在）。
-本仓库的 CI 在 push / PR 时自动运行同一门禁；私有 Core 的 CI 在构建前也会运行它（同源副本）。任一处失败即阻断合并。
+脚本固定扫描 `./games/`，递归全部 `.md` / `.mdx`，在内存中建立**全局索引**后统一检查：
+
+| 类别 | 检查 |
+| --- | --- |
+| 结构 | 页面是否位于 `games/<游戏>/<分类>/<...>/<页面>.md｜.mdx`；层级是否达标、扩展名是否小写 |
+| 命名 | 目录 / 文件名合法性（仅拦 `/ \ : * ? " < > \|`、控制字符、首尾空白与点） |
+| 保留字 | 游戏目录名不得与站点自身顶层路径同名（`search` / `pagefind` / `_astro` / `404`，见 `config/reserved-paths.json`） |
+| 冲突 | **重复 URL**（`Foo.md` 与 `Foo.mdx` → 同一 `/<id>/`）、大小写冲突（文件与目录） |
+| 元数据 | `title` / `description` 字符串；`tags` 字符串数组；`order` 数字；`draft` / `toc` 布尔；`updated` 合法日期 |
+| 游戏元数据 | `_game.yml` / `_games.yml` 的 YAML 解析与字段类型 |
+| 缩略图 | 正文 `[icon=名称]` 必须有对应图标文件；`_game.yml` 的 `cover` 相对路径必须存在（标准见 `config/thumbnails.json`） |
+
+失败时退出码为 1：
+
+```
+❌ Content validation failed
+
+共 1 个问题：
+
+  • Duplicate page ID: Satisfactory/Buildings/MAM → games/Satisfactory/Buildings/MAM.md, games/Satisfactory/Buildings/MAM.mdx
+```
+
+> 为什么必须拦重复 URL：`Foo.md` 与 `Foo.mdx` 会让构建**成功**，但两者映射到同一个 `/<...>/Foo/` 输出，其中一个被静默覆盖。
+
+本仓库的 GitHub Actions（[.github/workflows/validate-content.yml](.github/workflows/validate-content.yml)）在 push / PR 时自动运行；站点构建前也会再运行一次。任一处失败即阻断合并。
+
+> 仓库已加入 `.gitattributes`（`* text=auto eol=lf`）。共享规则文件 `scripts/content-rules.mjs` 靠 sha256 逐字节校验，Windows 检出若转成 CRLF 会误报「共享规则不一致」，重新检出或 `git add --renormalize .` 即可恢复。
 
 ## 别名（Wikifactory-Alias）
 
@@ -243,4 +266,4 @@ npm run content:validate
 
 ## ⚠️ 安全
 
-本仓库**公开可读**：请勿提交任何密钥、令牌、凭据或个人隐私信息。所有凭据只放在私有 Core 仓库。
+本仓库**公开可读**：请勿提交任何密钥、令牌、凭据或个人隐私信息。
