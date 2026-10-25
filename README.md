@@ -30,10 +30,6 @@ npm run content:validate   # 本地内容门禁
 
 同一门禁会在 push / PR 时自动运行；任一处失败即阻断合并。
 
-## 页面别名
-
-页面别名（让手输的非正式路径落到正确页面）不在本仓库维护，见公开仓库 [Wikifactory-Alias](https://github.com/hellokug2699/Wikifactory-Alias)。
-
 ## 安全
 
 本仓库**公开可读**：请勿提交任何密钥、令牌、凭据或个人隐私信息。

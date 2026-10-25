@@ -260,10 +260,6 @@ npm run content:validate
 
 > 仓库已加入 `.gitattributes`（`* text=auto eol=lf`）。共享规则文件 `scripts/content-rules.mjs` 靠 sha256 逐字节校验，Windows 检出若转成 CRLF 会误报「共享规则不一致」，重新检出或 `git add --renormalize .` 即可恢复。
 
-## 别名（Wikifactory-Alias）
-
-页面别名（让用户手输的「非正式路径」也能落到正确页面）不在本仓库维护，见公开仓库 **Wikifactory-Alias**，请在那边提交。
-
 ## ⚠️ 安全
 
 本仓库**公开可读**：请勿提交任何密钥、令牌、凭据或个人隐私信息。
